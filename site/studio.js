@@ -1,20 +1,29 @@
 /* Focused V0.4 refinements: source-aware returns, voice selection, existing-material animation assembly. */
 state.imageReturn=mobileStored.imageReturn||null;
 state.audioToolReturn=mobileStored.audioToolReturn||null;
+state.utilityReturns=mobileStored.utilityReturns||{};
+function studioRouteContext(){return {route,param:['assetedit','detail','download','quickprogress','quickresult'].includes(route)&&typeof param==='string'?param:'',assetTab:state.assetTab,videoStep:state.videoStep};}
+function studioUtilityReturn(){return state.utilityReturns[route]||{route:creationHome(),param:''};}
 if(['16:9','9:16'].includes(state.drafts.video?.ratio))state.ratio=state.drafts.video.ratio;
 const imageRoutes=['assetedit','costume'];
 const studioGoPrevious=go;
 go=function(r,p=''){
- if(['voice','music'].includes(r)&&route!==r)state.audioToolReturn=route==='video'?{route:'video',videoStep:state.videoStep}:null;
+ const previous=['taskcenter','recording','voicebuild'].includes(route)?studioUtilityReturn():imageRoutes.includes(route)?state.imageReturn:['voice','music'].includes(route)?state.audioToolReturn:null;
+ const returning=previous?.route===r&&(previous.param||'')===p;
+ if(!returning&&r==='taskcenter'&&route!=='taskcenter')state.utilityReturns.taskcenter=studioRouteContext();
+ if(!returning&&['recording','voicebuild'].includes(r)&&!['recording','voicebuild'].includes(route))state.utilityReturns.recording=studioRouteContext();
+ if(!returning&&r==='voicebuild'&&route!=='voicebuild')state.utilityReturns.voicebuild=route==='recording'?studioRouteContext():state.utilityReturns.recording;
+ if(['taskcenter','recording','voicebuild'].includes(route)){const to=studioUtilityReturn();if(to.route===r){state.assetTab=to.assetTab||state.assetTab;if(r==='video')state.videoStep=to.videoStep||1;}}
+ if(!returning&&['voice','music'].includes(r)&&route!==r)state.audioToolReturn=route==='video'?{route:'video',videoStep:state.videoStep}:null;
  if(['voice','music'].includes(route)&&r==='video'&&state.audioToolReturn)state.videoStep=state.audioToolReturn.videoStep||1;
- if(imageRoutes.includes(r)&&!imageRoutes.includes(route))state.imageReturn={route,param:typeof param==='string'?param:'',assetTab:state.assetTab,videoStep:state.videoStep};
+ if(!returning&&imageRoutes.includes(r)&&!imageRoutes.includes(route))state.imageReturn=studioRouteContext();
  if(imageRoutes.includes(route)&&state.imageReturn?.route===r){state.assetTab=state.imageReturn.assetTab;if(r==='video')state.videoStep=state.imageReturn.videoStep||1;}
  persist();studioGoPrevious(r,p);
 };
 const studioPersistPrevious=persist;
-persist=function(){studioPersistPrevious();try{const o=JSON.parse(localStorage.getItem('pawpani-ui-v1')||'{}');o.imageReturn=state.imageReturn;o.audioToolReturn=state.audioToolReturn;localStorage.setItem('pawpani-ui-v1',JSON.stringify(o));}catch{}};
+persist=function(){studioPersistPrevious();try{const o=JSON.parse(localStorage.getItem('pawpani-ui-v1')||'{}');o.imageReturn=state.imageReturn;o.audioToolReturn=state.audioToolReturn;o.utilityReturns=state.utilityReturns;localStorage.setItem('pawpani-ui-v1',JSON.stringify(o));}catch{}};
 const studioNavPrevious=nav;
-nav=function(){studioNavPrevious();if(['voice','music'].includes(route)&&state.audioToolReturn){const back=$('#mobile-header').querySelector('[aria-label="返回"]');if(back){back.dataset.route='video';back.setAttribute('aria-label','返回动画草稿');}}if(imageRoutes.includes(route)){const back=$('#mobile-header').querySelector('[aria-label="返回"]');if(back){const to=state.imageReturn||{route:'assets',param:''};back.dataset.route=to.route;back.dataset.param=to.param||'';back.setAttribute('aria-label',to.route==='advanced'?'返回高级创作':to.route==='assets'?'返回素材库':to.route==='video'?'返回动画草稿':'返回上一页');}}};
+nav=function(){studioNavPrevious();if(['taskcenter','recording','voicebuild'].includes(route)){const back=$('#mobile-header').querySelector('[aria-label="返回"]'),to=studioUtilityReturn();if(back){back.dataset.route=to.route;back.dataset.param=to.param||'';back.setAttribute('aria-label',to.route==='home'?'返回一键成片':to.route==='advanced'?'返回高级创作':to.route==='assets'?'返回素材库':to.route==='works'?'返回作品':to.route==='recording'?'返回录音页':'返回上一页');}}if(['voice','music'].includes(route)&&state.audioToolReturn){const back=$('#mobile-header').querySelector('[aria-label="返回"]');if(back){back.dataset.route='video';back.setAttribute('aria-label','返回动画草稿');}}if(imageRoutes.includes(route)){const back=$('#mobile-header').querySelector('[aria-label="返回"]');if(back){const to=state.imageReturn||{route:'assets',param:''};back.dataset.route=to.route;back.dataset.param=to.param||'';back.setAttribute('aria-label',to.route==='advanced'?'返回高级创作':to.route==='assets'?'返回素材库':to.route==='video'?'返回动画草稿':'返回上一页');}}};
 function packTones(){return [{id:'preset-lively',name:'元气伙伴',mode:'预设音色',version:1},{id:'preset-gentle',name:'温柔伙伴',mode:'预设音色',version:1},...state.voices.filter(v=>['DEMO_READY','READY'].includes(v.mode||v.status)).map(v=>({id:v.id,name:v.name,version:v.version||1,mode:v.mode==='READY'?'已生成音色':'已生成音色（演示）'}))];}
 function packVoicePicker(){const d=state.drafts.pack||{},all=packTones(),selected=d.voiceId||all.find(v=>v.name===state.voice)?.id||all[0].id;return `<div class="pack-tone-picker"><label class="label" for="pack-tone">选择音色</label><select id="pack-tone"><optgroup label="预设音色">${selectItems(all.filter(v=>v.id.startsWith('preset-')),selected)}</optgroup><optgroup label="已生成的音色">${all.some(v=>!v.id.startsWith('preset-'))?selectItems(all.filter(v=>!v.id.startsWith('preset-')),selected):'<option disabled>暂无已生成音色</option>'}</optgroup></select><div class="row between"><p class="hint">整包使用所选音色，生成后保留音色版本。</p><button class="textlink" data-pack-tone-preview>试听示例 ▶</button></div><p class="hint">生成音色目前为演示记录；试听使用浏览器示例声音。</p></div>`;}
 const studioPackPrevious=pack;
