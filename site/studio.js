@@ -1,4 +1,5 @@
 /* Focused V0.4 refinements: source-aware returns, voice selection, existing-material animation assembly. */
+state.outfit=outfits[state.outfit]?state.outfit:'normal';
 state.imageReturn=mobileStored.imageReturn||null;
 state.audioToolReturn=mobileStored.audioToolReturn||null;
 state.utilityReturns=mobileStored.utilityReturns||{};
