@@ -67,7 +67,7 @@ document.addEventListener('submit',e=>{if(e.target.id==='login-form'){e.preventD
 document.addEventListener('click',e=>{const b=e.target.closest('button,[data-open]');if(!b)return;const d=b.dataset;const stop=()=>{e.preventDefault();e.stopImmediatePropagation()};
  if(d.route&&d.param!==undefined){stop();if(route==='video')capture();go(d.route,d.param);return}
  if(d.route){if(route==='video')capture();if(d.route==='video'&&route!=='video')state.videoStep=1;return}
- if(d.vstep){stop();capture();if(+d.vstep===3&&!$('#action').value.trim()){toast('请先填写动作描述');return}state.videoStep=+d.vstep;render();$('#viewport').scrollTo({top:0,behavior:'smooth'});return}
+ if(d.vstep){stop();capture();if([2,3].includes(+d.vstep)&&route==='video'&&typeof validateVideoAssembly==='function'&&!validateVideoAssembly())return;state.videoStep=+d.vstep;render();$('#viewport').scrollTo({top:0,behavior:'smooth'});return}
  if(d.outfit){stop();state.outfit=d.outfit;persist();render();return}
  if(d.voicemood){stop();state.voiceMood=d.voicemood;$$('[data-voicemood]').forEach(x=>x.classList.toggle('active',x.dataset.voicemood===state.voiceMood));return}
  if(d.showHome!==undefined){stop();state.assetTab='home';render();return}
